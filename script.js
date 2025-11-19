@@ -2,7 +2,7 @@
 // 1. CONFIGURACIÓN DE CONEXIÓN (API)
 // ==============================================================
 
-// 👇 TU URL DE APPS SCRIPT
+// 👇 TU URL DE APPS SCRIPT (Asegúrate de que sea la correcta terminada en /exec)
 const API_URL = "https://script.google.com/macros/s/AKfycbzDr6Hhetw3EMqIdrMszZHkyXTXS1KUg6iQ5ahmPkUz35QqTFuSymAkg6gqdUXg5wlncA/exec";
 
 async function apiService(action, payload = {}) {
@@ -40,13 +40,13 @@ function formatCurrency(amount) {
     return `$ ${parseFloat(amount).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
 }
 
-function showMessage(id, message, isSuccess, duration = 8000) {
+function showMessage(id, message, isSuccess, duration = 4000) {
     const msgDiv = document.getElementById(id);
     if (!msgDiv) return;
     msgDiv.textContent = message;
     msgDiv.className = isSuccess ? 'message success' : 'message error';
     msgDiv.style.display = 'block';
-    setTimeout(() => { msgDiv.style.display = 'none'; }, isSuccess ? 4000 : 8000);
+    setTimeout(() => { msgDiv.style.display = 'none'; }, duration);
 }
 
 function showSuccessMessage(id, htmlContent) {
@@ -81,8 +81,10 @@ function openTab(evt, tabName) {
         cargarInventario();
     }
     if (tabName === 'Gestion') {
-        document.getElementById('SubRecetas').style.display = 'block';
-        document.querySelectorAll('#Gestion .nav-tabs .tab-button')[0].classList.add('active');
+        const subRecetas = document.getElementById('SubRecetas');
+        if (subRecetas) subRecetas.style.display = 'block';
+        const firstSubBtn = document.querySelectorAll('#Gestion .nav-tabs .tab-button')[0];
+        if (firstSubBtn) firstSubBtn.classList.add('active');
     }
     if (tabName === 'ListadoPrecios') {
         cargarListadoPrecios();
@@ -114,11 +116,10 @@ async function cargarInventario() {
         INVENTARIO_SIMPLE = res.productos;
         INVENTARIO_COMBOS = res.combos;
         renderQuickSelect();
-        if (document.getElementById('Ventas').style.display === 'block') {
-             console.log('Inventario sincronizado');
-        }
+        // Mensaje silencioso en consola para no molestar al usuario cada vez
+        console.log('Inventario actualizado');
     } else {
-        showMessage('venta-message', 'Error cargando inventario: ' + res.message, false);
+        showMessage('venta-message', 'Error inventario: ' + res.message, false);
     }
 }
 
@@ -170,11 +171,23 @@ function agregarProducto(id, qty) {
 
     let item = INVENTARIO_COMBOS.find(c => String(c.id) === prodId);
     if (!item) {
-        showMessage('venta-message', 'Producto no encontrado en Recetas.', false);
-        return;
+        // Intentar buscar en productos simples si no está en combos
+        item = INVENTARIO_SIMPLE.find(p => String(p.id) === prodId);
+        if (!item) {
+            showMessage('venta-message', 'Producto no encontrado.', false);
+            return;
+        }
+        // Adaptar estructura de producto simple a combo para el carrito
+        item.precio = item.costoPromedio || 0; // Ojo: esto usa costo, idealmente debería tener precio venta en recetas
     }
     
+    // Si el producto no tiene precio definido (es 0 o undefined), avisar
     const precioUnitario = parseFloat(item.precio);
+    if (isNaN(precioUnitario) || precioUnitario <= 0) {
+         showMessage('venta-message', `El producto ${prodId} no tiene precio de venta configurado.`, false);
+         return;
+    }
+
     const subtotal = precioUnitario * cantidad;
 
     const itemVenta = {
@@ -229,7 +242,7 @@ function renderCarrito() {
     let subtotalSinDesc = 0;
 
     if (CARRITO.length === 0) {
-        body.innerHTML = '<p style="padding: 10px; text-align: center; color: #888;">Vacío</p>';
+        body.innerHTML = '<p style="padding: 10px; text-align: center; color: #888;">El carrito está vacío.</p>';
     }
 
     CARRITO.forEach((item, index) => {
@@ -251,14 +264,15 @@ function renderCarrito() {
                 <strong style="color: ${descMonto > 0.01 ? '#dc3545' : '#333'};">${formatCurrency(subtotalFinal)}</strong>
                 <div style="font-size: 0.75em;">
                     Desc: <input type="number" style="width: 35px;" value="${item.descuentoPct}" oninput="actualizarDescuento(${index}, this)">%
-                    <button onclick="eliminarItem(${index})" style="background: #dc3545; color: white; border: none;">X</button>
+                    <button onclick="eliminarItem(${index})" style="background: #dc3545; color: white; border: none; cursor: pointer;">X</button>
                 </div>
             </div>`;
         body.appendChild(row);
     });
 
     cartCount.textContent = CARRITO.length;
-    document.getElementById('modal-total-final').textContent = formatCurrency(totalFinalVenta);
+    const totalBtn = document.getElementById('modal-total-final');
+    if(totalBtn) totalBtn.textContent = formatCurrency(totalFinalVenta);
     
     detailsFooter.innerHTML = `
         <p>Subtotal: <span style="float: right;">${formatCurrency(subtotalSinDesc)}</span></p>
@@ -273,7 +287,8 @@ function mostrarModalConfirmacion() {
     let html = '<table class="cart-table" style="width:100%"><thead><tr><th>Prod</th><th>Cant</th><th>$ Final</th></tr></thead><tbody>';
     let total = 0;
     CARRITO.forEach(item => {
-        const final = item.subtotal - (item.subtotal * (item.descuentoPct/100));
+        const desc = item.subtotal * (item.descuentoPct / 100);
+        const final = item.subtotal - desc;
         total += final;
         html += `<tr><td>${item.nombre}</td><td>${item.cantidad}</td><td>${formatCurrency(final)}</td></tr>`;
     });
@@ -393,6 +408,7 @@ async function enviarReceta() {
 
     const res = await apiService('registrarRecetaCombo', { datos: data });
     showMessage('receta-message', res.message, res.success);
+    if(res.success) document.getElementById('form-receta').reset();
 }
 
 async function enviarEgreso() {
@@ -410,15 +426,14 @@ async function enviarEgreso() {
 }
 
 // ==============================================================
-// 7. REMITO (Corregido)
+// 7. REMITO (CON FUNCIÓN LIMPIAR AÑADIDA)
 // ==============================================================
 
 function irARemito(id) {
     document.getElementById('remitoNumPedido').value = id;
-    // Simular click en tab Remito
     const tabs = document.querySelectorAll(".tab-button");
-    // Buscamos el botón que dice "Remito"
     let remitoBtn = null;
+    // Buscar el botón de remito por texto
     tabs.forEach(btn => { if(btn.innerText.includes("Remito")) remitoBtn = btn; });
     
     if(remitoBtn) openTab({currentTarget: remitoBtn}, 'Remito');
@@ -429,12 +444,11 @@ async function cargarRemito() {
     const id = document.getElementById('remitoNumPedido').value;
     if(!id) return showMessage('remito-message', 'Ingrese ID', false);
 
-    document.getElementById('remitoResultado').innerHTML = 'Cargando...';
-    // Usamos action 'obtenerDatosRemito' que agregamos al Code.gs
+    document.getElementById('remitoResultado').innerHTML = '<p>Cargando remito...</p>';
     const res = await apiService('obtenerDatosRemito', { id: id }); 
 
     if(!res.success) {
-        document.getElementById('remitoResultado').innerHTML = res.message;
+        document.getElementById('remitoResultado').innerHTML = `<p style="color:red">${res.message}</p>`;
         return;
     }
     
@@ -444,7 +458,6 @@ async function cargarRemito() {
 }
 
 function renderRemito(data) {
-    // 1. Filas de productos
     let itemsHtml = '';
     data.productos.forEach(p => {
         itemsHtml += `
@@ -457,16 +470,14 @@ function renderRemito(data) {
         </tr>`;
     });
 
-    // 2. Rellenar filas vacías (Mínimo 7)
+    // Rellenar filas vacías (Mínimo 7)
     const MIN_FILAS = 7;
     const filasVacias = Math.max(0, MIN_FILAS - data.productos.length);
     for (let i = 0; i < filasVacias; i++) {
         itemsHtml += '<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>';
     }
 
-    // 3. Totales y Descuentos
-    // (OJO: data.total es el TOTAL FINAL pagado. Si hubo descuento, el subtotal era mayor)
-    // Extraemos el descuento de las observaciones si existe
+    // Descuentos
     const descuentoMatch = data.observaciones ? data.observaciones.match(/Total Desc\.\sAplicado:\s([\d.,]+)/) : null;
     const montoDescuento = descuentoMatch ? parseFloat(descuentoMatch[1].replace(',', '.')) : 0; 
     const subtotalReal = Number(data.total) + montoDescuento;
@@ -489,7 +500,7 @@ function renderRemito(data) {
                 <tr><td><strong>Domicilio:</strong> ${data.cliente.domicilio}</td><td><strong>Fecha:</strong> ${data.fecha}</td></tr>
             </table>
             
-            <table class="remito-tabla" style="width:100%; border-collapse:collapse; border:1px solid #000;">
+            <table style="width:100%; border-collapse:collapse; border:1px solid #000;">
                 <thead style="background:#eee;">
                     <tr>
                         <th style="border:1px solid #000">Cod</th>
@@ -515,19 +526,24 @@ function renderRemito(data) {
                     <td style="text-align:right; font-size:1.2em; background:#eee;"><strong>${formatCurrency(data.total)}</strong></td>
                  </tr>
             </table>
-            
             <p style="text-align:center; font-size:0.8em; margin-top:20px;">Documento no válido como factura</p>
         </div>
     `;
     document.getElementById('remitoResultado').innerHTML = html;
 }
 
+// 🚨 LA FUNCIÓN FALTANTE
+function limpiarRemito() {
+    document.getElementById('remitoNumPedido').value = '';
+    document.getElementById('remitoResultado').innerHTML = '<p>Utilice el botón "Buscar Venta" para generar el remito.</p>';
+    document.getElementById('botonesRemito').hidden = true;
+    showMessage('remito-message', 'Limpiado', true);
+}
+
 function descargarPNGRemito() {
     const element = document.getElementById('remitoContainer');
     if(!element) return showMessage('remito-message', 'No hay remito', false);
     
-    // html2canvas necesita ejecutarse después de que la imagen cargue
-    // pero como es local, suele ser rápido.
     html2canvas(element, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
         const link = document.createElement('a');
         link.download = `Remito_${document.getElementById('remitoNumPedido').value}.png`;
@@ -537,7 +553,7 @@ function descargarPNGRemito() {
 }
 
 // ==============================================================
-// 8. REPORTES Y PRECIOS (Restaurado con Categorías)
+// 8. REPORTES Y PRECIOS
 // ==============================================================
 
 async function obtenerEstadisticas() {
@@ -554,11 +570,7 @@ function renderEstadisticas(data) {
         <div class="metric-box expense-box"><h4>Egresos</h4><p>${formatCurrency(data.resumenGeneral.totalEgresos)}</p></div>
     `;
     
-    // Gráfico
     if (data.resumenDiario) renderVentasChart(data.resumenDiario);
-
-    // Tablas (simplificado para brevedad, pero funcional)
-    // ... (puedes añadir las tablas de resumen diario y egresos aquí si las necesitas visibles)
 }
 
 function renderVentasChart(resumen) {
@@ -580,7 +592,7 @@ function renderVentasChart(resumen) {
 
 async function cargarListadoPrecios() {
     const container = document.getElementById('listado-precios-output');
-    container.innerHTML = '<p>⏳ Cargando lista de precios...</p>';
+    container.innerHTML = '<p>⏳ Cargando...</p>';
     
     const res = await apiService('obtenerPrecios');
     
@@ -593,12 +605,13 @@ async function cargarListadoPrecios() {
 
 function mostrarListadoPrecios(datos) {
     const container = document.getElementById('listado-precios-output');
+    if (!container) return;
+
     if (!datos || datos.length === 0) {
         container.innerHTML = '<p class="message">No se encontraron productos.</p>';
         return;
     }
 
-    // 1. Agrupar por categoría
     const grupos = datos.reduce((acc, p) => {
         const cat = (p.categoria && p.categoria.trim() !== "") ? p.categoria : 'Sin Categoría';
         if (!acc[cat]) acc[cat] = [];
@@ -606,7 +619,6 @@ function mostrarListadoPrecios(datos) {
         return acc;
     }, {});
 
-    // 2. Orden personalizado
     const orden = [
         'Combos Super Pancho', 'Combos Hamburguesa', 'Hamburguesas', 'Salchichas', 
         'Panificados', 'Aderezos', 'Envios', 'Sin Categoría'
@@ -618,13 +630,11 @@ function mostrarListadoPrecios(datos) {
         return ia - ib;
     });
 
-    // 3. Renderizar
     let html = '';
     catOrdenadas.forEach(cat => {
         html += `<h4 style="margin-top:25px; color:#0099ff; border-bottom:2px solid #eee;">${cat}</h4>`;
         html += `<table class="data-table-metrics" style="width:100%"><thead><tr style="background:#f9f9f9"><th style="text-align:left">Código</th><th>Producto</th><th style="text-align:right">Precio</th></tr></thead><tbody>`;
         
-        // Ordenar alfabéticamente dentro de la categoría
         grupos[cat].sort((a,b) => a.nombre.localeCompare(b.nombre));
 
         grupos[cat].forEach(p => {
@@ -645,9 +655,7 @@ function filtrarTablaPrecios() {
     const rows = document.querySelectorAll('#listado-precios-output table tr');
     
     rows.forEach(row => {
-        // Ignorar encabezados
         if(row.parentNode.tagName === 'THEAD') return;
-        
         const txt = row.innerText || row.textContent;
         row.style.display = txt.toUpperCase().indexOf(filter) > -1 ? "" : "none";
     });
@@ -728,7 +736,7 @@ async function aplicarCambios() {
     const res = await apiService('actualizarPrecio', { datos: payload });
     showMessage('costos-message', res.message, res.success);
     
-    if(res.success) cargarDatosParaAnalisis(); // Recargar para ver cambios
+    if(res.success) cargarDatosParaAnalisis(); 
 }
 
 async function buscarClienteDetalle() {
