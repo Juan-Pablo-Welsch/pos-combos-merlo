@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Combos Express Merlo</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <img src="logo.png" alt="Logo Combos Express Merlo">
+            <h1>POS Combos Express Merlo</h1>
+        </div>
+        <button id="cart-fab" onclick="toggleCart()">
+            🛒<span id="cart-count">0</span>
+        </button>
+    </header>
+
+    <div class="nav-tabs">
+        <button class="tab-button active" onclick="openTab(event, 'Ventas')">🛒 Venta Rápida</button>
+        <button class="tab-button" onclick="openTab(event, 'Remito')">📄 Remito</button>
+        <button class="tab-button" onclick="openTab(event, 'Finanzas')">💸 Egresos</button>
+        <button class="tab-button" onclick="openTab(event, 'Clientes')">👥 Clientes</button>
+        <button class="tab-button" onclick="openTab(event, 'Inventario')">📦 Inventario</button>
+        <button class="tab-button" onclick="openTab(event, 'Gestion')">⚙️ Gestión</button>
+        <button class="tab-button" onclick="openTab(event, 'ListadoPrecios')">🧾 Lista de Precios</button>
+    </div>
+
+    <div id="Ventas" class="tab-content" style="display: block;">
+        <h3>Registrar Venta</h3>
+        <div class="pos-layout">
+            <div class="pos-left">
+                <h4>Selección Rápida y Búsqueda</h4>
+                <div class="form-group" style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background-color: #f7f7f7; margin-bottom: 10px;">
+                    <label for="search-id">Búsqueda Manual por Código:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="search-id" placeholder="Ej: 110C o 110" style="flex: 1;">
+                        <input type="number" id="search-qty" value="1" min="0.5" step="0.5" style="width: 80px;">
+                        <button class="btn-primary" onclick="agregarProductoDesdeBusqueda()">Añadir</button>
+                    </div>
+                </div>
+                <div class="quick-select-container" id="quick-select-container"></div>
+                
+                <div style="margin-top: 2rem; padding: 15px; border: 1px solid #eee; border-radius: 8px; background: #fafafa;">
+                    <h4>Detalle de Compra Rápida</h4>
+                    <p>Los ítems añadidos se listan en el carrito (<span style="font-size: 1.2em;">🛒</span>) flotante.</p>
+                    <div id="cart-summary-sidebar">
+                        <div class="total-line">Total: <span id="cart-total-sidebar">$ 0.00</span></div>
+                        <p style="text-align: right; font-size: 0.9em; color: #dc3545;">Descuento Total: <span id="total-descuento-sidebar">$ 0.00</span></p>
+                    </div>
+                    <div id="venta-message" class="message"></div>
+                </div>
+            </div>
+            <div class="pos-right"></div>
+        </div>
+    </div>
+
+    <div id="ListadoPrecios" class="tab-content" style="display: none;">
+        <h3>🧾 Lista Completa de Precios de Venta al Público</h3>
+        <button class="btn-primary" onclick="cargarListadoPrecios()">Actualizar Listado</button>
+        <p style="margin-top: 10px;">Busque por código o nombre del producto:</p>
+        <input type="text" id="filtro-precios" onkeyup="filtrarTablaPrecios()" placeholder="Escriba aquí para buscar..." style="width: 100%; padding: 10px; margin-bottom: 20px;">
+        <div id="listado-precios-output">
+            <p>Haga clic en 'Actualizar Listado' para cargar los precios.</p>
+        </div>
+    </div>
+
+    <div id="cart-panel" class="cart-panel">
+        <header>
+            Carrito de Compras
+            <button class="btn-outline" onclick="toggleCart()" style="padding: 4px 10px; font-size: 0.8rem;">Cerrar</button>
+        </header>
+        <div class="cart-items">
+            <p style="font-weight: 600; padding: 5px 0;">Ítems en Carrito:</p>
+            <div id="cart-body-flotante"></div>
+        </div>
+        <footer>
+            <div id="cart-details-footer"></div>
+            <div class="form-group" style="margin-top: 10px;">
+                <label for="clienteIdFlotante" style="font-weight: normal;">ID Cliente (Opcional):</label>
+                <input type="text" id="clienteIdFlotante" placeholder="Ej: CL-001">
+            </div>
+            <div class="form-group">
+                <label for="metodoPagoFlotante" style="font-weight: normal;">Método de Pago:</label>
+                <select id="metodoPagoFlotante">
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Transferencia">Transferencia</option>
+                </select>
+            </div>
+            <button class="btn-primary btn-success" style="margin-top: 10px;" onclick="mostrarModalConfirmacion()">
+                ✅ Registrar Venta (<span id="modal-total-final">$0.00</span>)
+            </button>
+        </footer>
+    </div>
+
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h4>Confirmar Pedido</h4>
+            <p>¿Está seguro de registrar la siguiente venta?</p>
+            <div id="modal-detalle" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 4px;"></div>
+            <p style="font-size: 1.2em; font-weight: bold; margin-top: 15px;">TOTAL FINAL: <span id="modal-total" style="float: right;">$ 0.00</span></p>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="cerrarModal()">Cancelar</button>
+                <button class="btn btn-primary btn-success" onclick="registrarVenta()">Registrar Venta</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="Remito" class="tab-content" style="display: none;">
+        <h3>📄 Generador de Remitos/Facturas Proforma</h3>
+        <label for="remitoNumPedido">Número de Pedido (ID Venta):</label>
+        <input type="text" id="remitoNumPedido" placeholder="Ej: 000001" />
+        <button class="btn-primary" onclick="cargarRemito()">Buscar Venta</button>
+        <div id="botonesRemito" style="margin-top: 20px;" hidden>
+            <button class="btn-primary" style="background-color: #000;" onclick="descargarPNGRemito()">Descargar PNG</button>
+            <button class="btn-outline" onclick="limpiarRemito()">Limpiar</button>
+        </div>
+        <div id="remito-message" class="message"></div>
+        <div id="remitoResultado" style="margin-top: 30px;">
+            <p>Utilice el botón "Buscar Venta" para generar el remito.</p>
+        </div>
+    </div>
+
+    <div id="Finanzas" class="tab-content" style="display: none;">
+        <h3>💸 Registro de Egresos</h3>
+        <form id="form-egreso">
+            <div class="form-group">
+                <label for="egreso-tipo">Tipo de Transacción:</label>
+                <select id="egreso-tipo" required onchange="actualizarCategoria()">
+                    <option value="Gasto">Gasto General</option>
+                    <option value="Pago a Proveedor">Pago a Proveedor</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="egreso-categoria">Categoría / ID Proveedor:</label>
+                <input type="text" id="egreso-categoria" required placeholder="Ej: Alquiler, Sueldo o ID del Proveedor">
+            </div>
+            <div class="form-group">
+                <label for="egreso-monto">Monto Pagado:</label>
+                <input type="number" id="egreso-monto" required min="0" step="0.01">
+            </div>
+            <div class="form-group">
+                <label for="egreso-descripcion">Descripción/Detalle:</label>
+                <input type="text" id="egreso-descripcion" placeholder="Ej: Pago de Luz Diciembre, Pago lote Salchichas.">
+            </div>
+            <button type="button" class="btn-primary" onclick="enviarEgreso()">Registrar Egreso</button>
+        </form>
+        <div id="egreso-message" class="message"></div>
+    </div>
+
+    <div id="Clientes" class="tab-content" style="display: none;">
+        <h3>👥 Cargar Nuevo Cliente</h3>
+        <form id="form-cliente">
+            <div class="form-group">
+                <label for="nombre">Nombre Cliente / Razón Social:</label>
+                <input type="text" id="nombre" required>
+            </div>
+            <div class="form-group">
+                <label for="domicilio">Domicilio:</label>
+                <input type="text" id="domicilio">
+            </div>
+            <div class="form-group">
+                <label for="referencia">Referencia Domicilio:</label>
+                <input type="text" id="referencia">
+            </div>
+            <div class="form-group">
+                <label for="tel1">Teléfono Principal:</label>
+                <input type="text" id="tel1">
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email">
+            </div>
+            <button type="button" class="btn-primary" onclick="enviarCliente()">Registrar Cliente</button>
+        </form>
+        <div id="cliente-message" class="message"></div>
+    </div>
+
+    <div id="Inventario" class="tab-content" style="display: none;">
+        <h3>📦 Ingresar Mercadería (Consignación - Crea Lote)</h3>
+        <form id="form-mercaderia">
+            <div class="form-group">
+                <label for="idProducto">ID Producto (SKU):</label>
+                <input type="text" id="idProducto" required>
+            </div>
+            <div class="form-group">
+                <label for="cantidad">Cantidad Recibida:</label>
+                <input type="number" id="cantidad" required min="1">
+            </div>
+            <div class="form-group">
+                <label for="costo">Costo Unitario (Precio al Proveedor HOY):</label>
+                <input type="number" id="costo" required step="0.01">
+            </div>
+            <div class="form-group">
+                <label for="idProveedor">ID Proveedor:</label>
+                <input type="text" id="idProveedor">
+            </div>
+            <button type="button" class="btn-primary" onclick="enviarMercaderia()">Registrar Entrada</button>
+        </form>
+        <div id="mercaderia-message" class="message"></div>
+    </div>
+
+    <div id="Gestion" class="tab-content" style="display: none;">
+        <div class="nav-tabs" style="margin: 0; border-radius: 0;">
+            <button class="tab-button active" onclick="openSubTab(event, 'SubRecetas')">⚙️ Recetas de Combos</button>
+            <button class="tab-button" onclick="openSubTab(event, 'SubCostos')">💸 Costos y Precios</button>
+            <button class="tab-button" onclick="openSubTab(event, 'SubMetricas')">📈 Métricas Generales</button>
+            <button class="tab-button" onclick="openSubTab(event, 'SubClientes')">👥 Reporte Cliente Detalle</button>
+        </div>
+
+        <div id="SubRecetas" class="tab-content-sub" style="display: block;">
+            <h3>⚙️ Gestión de Recetas de Combos</h3>
+            <form id="form-receta">
+                <h4>Datos del Combo / Kit de Venta</h4>
+                <div class="form-group">
+                    <label for="receta-id">ID Kit Venta (Ej: 110C o 110 para simple):</label>
+                    <input type="text" id="receta-id" required placeholder="Usar ID único para este combo/producto simple">
+                </div>
+                <div class="form-group">
+                    <label for="receta-nombre">Nombre del Combo/Producto:</label>
+                    <input type="text" id="receta-nombre" required>
+                </div>
+                <div class="form-group">
+                    <label for="receta-precio">Precio de Venta Unitario (CRÍTICO: Obligatorio para todo lo que se vende):</label>
+                    <input type="number" id="receta-precio" required step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="receta-factor">Factor de Conversión (Ej: 1 para unidad, 0.5 para media):</label>
+                    <input type="number" id="receta-factor" required step="0.01" value="1">
+                </div>
+
+                <h4>Componentes del Combo</h4>
+                <p>Define los productos simples que se consumen por cada unidad vendida. Para productos simples (ej. 110), el componente es el mismo ID con Cantidad Base 1.</p>
+                <div id="componentes-container">
+                    <div class="component-row">
+                        <input type="text" class="component-id" placeholder="ID Producto (Ej: 110)">
+                        <input type="number" class="component-qty" placeholder="Cantidad Base Consumida" step="0.01">
+                        <button type="button" class="btn-danger" onclick="this.parentNode.remove()">X</button>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-primary" onclick="agregarComponente()">Añadir Componente</button>
+                <hr style="margin: 20px 0;">
+                <button type="button" class="btn-primary" onclick="enviarReceta()">Registrar/Actualizar Receta</button>
+            </form>
+            <div id="receta-message" class="message"></div>
+        </div>
+
+        <div id="SubCostos" class="tab-content-sub" style="display: none;">
+            <h3>💸 Análisis y Actualización de Precios</h3>
+            <div class="form-group">
+                <label for="costo-search-id">Buscar Producto/Combo por ID:</label>
+                <input type="text" id="costo-search-id" placeholder="Ej: 104 o 110C">
+                <button class="btn-primary" onclick="cargarDatosParaAnalisis()">Cargar Datos</button>
+            </div>
+            <div id="costos-message" class="message"></div>
+            <hr style="margin: 20px 0;">
+            <div id="costo-analisis-output">
+                <p>Use la búsqueda para cargar los detalles de costo y precio de venta.</p>
+            </div>
+        </div>
+
+        <div id="SubMetricas" class="tab-content-sub" style="display: none;">
+            <h3>📈 Reportes y Métricas Detalladas</h3>
+            <button class="btn-primary" onclick="obtenerEstadisticas()">Actualizar Reportes</button>
+            <div id="metricas-message" class="message"></div>
+            <hr style="margin: 20px 0;">
+            <h4>Resumen General del Negocio</h4>
+            <div class="metric-box-container" id="resumen-metrics"></div>
+            <hr style="margin: 30px 0;">
+            <div id="resumen-diario-table"></div>
+            <div style="margin-top: 30px;">
+                <h4>Gráfico de Ventas Mensuales</h4>
+                <div class="chart-container-fixed">
+                    <canvas id="ventasChart" width="400" height="150"></canvas>
+                </div>
+            </div>
+            <hr style="margin: 30px 0;">
+            <div id="egresos-por-categoria-table"></div>
+        </div>
+
+        <div id="SubClientes" class="tab-content-sub" style="display: none;">
+            <h3>👥 Búsqueda y Detalle de Cliente</h3>
+            <div class="form-group" style="display: flex; gap: 10px;">
+                <input type="text" id="search-cliente-id" placeholder="Ingrese ID de Cliente (Ej: CL-001)" style="flex: 1;">
+                <button class="btn-primary" onclick="buscarClienteDetalle()">Buscar Cliente</button>
+            </div>
+            <div id="cliente-detalle-message" class="message"></div>
+            <div id="cliente-detalle-output" style="margin-top: 20px;">
+                <p>Utilice el ID del cliente para ver su historial de compras, ganancia generada y frecuencia de compra.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>

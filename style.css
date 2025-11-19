@@ -1,0 +1,250 @@
+/* CORRECCIÓN CRÍTICA: BOX-SIZING Y MODERNIZACIÓN */
+* { box-sizing: border-box; }
+
+/* --- BASE STYLES --- */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  background-color: #f9f9f9;
+  color: #1a1a1a;
+  padding-top: 130px;
+  min-height: 100vh;
+}
+header {
+  position: fixed; top: 0; left: 0; width: 100%; background: #fff; box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
+  display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1.2rem;
+  z-index: 1002;
+}
+
+/* ⬅️ LOGO Y TÍTULO */
+.logo-container {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  justify-content: flex-start;
+}
+.logo-container img {
+  height: 100px;
+  margin-right: 15px;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.logo-container h1 {
+  font-size: 35px;
+  font-weight: 700;
+  color: #0099ff;
+  letter-spacing: 0.5px;
+  flex-grow: 1;
+  text-align: center;
+}
+
+/* CARRIEL FAB (Floating Action Button) */
+#cart-fab {
+  background: #0099ff; color: white; border: none; border-radius: 50%; width: 42px; height: 42px; font-size: 1.4rem; cursor: pointer; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25); transition: background 0.2s ease; position: relative;
+  z-index: 1003;
+}
+#cart-fab:hover { background: #0078cc; transform: scale(1.05); }
+#cart-count { position: absolute; top: -5px; right: -5px; background: #ff3d00; color: white; font-size: 0.7rem; border-radius: 50%; padding: 2px 6px; }
+
+/* --- TAB MENU (ESTILO MODERNO DE PÍLDORAS) --- */
+.nav-tabs { display: flex; justify-content: center; background: #fff; border-bottom: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: relative; z-index: 90; }
+.nav-tabs button { flex: 1; border: none; background: transparent; padding: 0.9rem; font-size: 0.95rem; font-weight: 500; cursor: pointer; color: #555; transition: all 0.2s ease; }
+.nav-tabs button:hover { background: #f1f5f9; color: #0099ff; }
+.nav-tabs button.active { border-bottom: 3px solid #0099ff; color: #0099ff; background: #f9fafb; }
+
+/* --- CONTENIDO GENERAL --- */
+.tab-content { padding: 1.5rem; margin: 1rem; background: #fff; border-radius: 10px; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08); }
+h3 { border-bottom: 2px solid #0099ff; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+
+/* --- FORM & BUTTONS --- */
+.form-group { margin-bottom: 5px; } 
+.form-group label { display: block; margin-bottom: 2px; font-weight: normal; color: #555; font-size: 0.85em; }
+.form-group input, .form-group select { width: 100%; padding: 5px; border-radius: 4px; border: 1px solid #ddd; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); font-size: 0.9em; }
+
+.btn-primary { background-color: #0099ff; color: white; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: none; }
+.btn-primary:hover { background-color: #0078cc; }
+.btn-success { background-color: #00c853; }
+.btn-success:hover { background-color: #00a843; }
+
+
+/* ======== PRODUCTOS Y VENTA ======== */
+.pos-layout { display: flex; gap: 1.5rem; }
+.pos-left { flex: 1; }
+.pos-right { 
+    display: none; 
+    flex: 0; 
+    padding: 0; 
+    border: none; 
+    background: transparent; 
+    box-shadow: none; 
+}
+
+/* --- QUICK SELECT CARDS --- */
+.quick-select-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #fff;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap; 
+  justify-content: space-evenly;
+}
+.product-card {
+  width: 150px; 
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); 
+  border-radius: 8px;
+  transition: transform 0.2s;
+  border: 1px solid #eee;
+  cursor: pointer;
+}
+.product-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); }
+
+.card-image { 
+  width: 150px; 
+  height: 150px; 
+  object-fit: cover; 
+  border-top-left-radius: 8px; border-top-right-radius: 8px; 
+}
+.card-title { font-weight: 600; font-size: 0.9em; min-height: 2.5em; padding: 5px; }
+.card-price { font-size: 1.1em; color: #0099ff; font-weight: 700; padding: 0 5px 8px; }
+.card-controls { display: flex; justify-content: space-around; align-items: center; padding: 0.5rem; border-top: 1px solid #eee; background: #f9fafb; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+
+.control-qty-card { width: 40px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 4px 0; }
+.control-btn { background: #0099ff; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+
+/* Estilo de fila de carrito */
+.cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px dotted #eee; font-size: 0.9em; } 
+
+/* Estilo para el modal de confirmación y mensajes (sin cambios) */
+.modal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+.modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 400px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.btn-outline { background: #fff; color: #555; border: 1px solid #ccc; padding: 10px 15px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
+.btn-outline:hover { background: #f1f1f1; }
+.message { padding: 10px; border-radius: 4px; margin-top: 10px; display: none; }
+.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6fb; }
+
+/* Estilo para remito y métricas (sin cambios) */
+.remito { width: 720px; max-width: 100%; margin: 20px auto; padding: 30px; border: 1px solid #000; box-shadow: 0 0 10px rgba(0,0,0,0.1); background-color: white; font-family: monospace; }
+.remito table { border-collapse: collapse; width: 100%; font-size: 0.9em; }
+.remito table td, .remito table th { border: 1px solid #000; padding: 5px; }
+.remito thead th { background-color: #eee; text-align: center; }
+.metric-box-container { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 20px; }
+.metric-box { flex: 1; min-width: 200px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; color: white; }
+.metric-box h4 { margin-top: 0; font-size: 1rem; border: none !important; padding-bottom: 0.2rem !important; }
+.metric-box p { font-size: 1.8rem; font-weight: bold; margin: 5px 0 0; }
+.sales-box { background-color: #0099ff; }
+.profit-box { background-color: #00c853; }
+.expense-box { background-color: #ff9800; }
+.final-profit-box { background-color: #3f51b5; }
+.data-table-metrics { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.data-table-metrics th, .data-table-metrics td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+.data-table-metrics th { background-color: #f2f2f2; }
+
+/* ======== PANEL LATERAL DEL CARRITO (Flotante) */
+.cart-panel {
+  position: fixed; 
+  top: 120px; 
+  right: -360px; 
+  width: 360px; 
+  height: 100%;
+  max-height: calc(100vh - 120px); 
+  background: #fff; 
+  box-shadow: -4px 0 10px rgba(0, 0, 0, 0.2); 
+  transition: right 0.3s ease; 
+  z-index: 1000; 
+  display: flex; 
+  flex-direction: column;
+}
+
+.cart-panel.active { right: 0; }
+
+.cart-panel header { 
+  padding: 0.5rem 1rem; 
+  font-size: 1.2rem; 
+  font-weight: 600; 
+  border-bottom: 1px solid #eee; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+}
+
+.cart-panel .cart-items { 
+  flex: 1; 
+  overflow-y: auto; 
+  padding: 0.5rem 1rem; 
+}
+
+.cart-panel footer { 
+  border-top: 1px solid #eee; 
+  padding: 0.5rem 1rem; 
+  background: #fafafa; 
+  flex-shrink: 0; 
+}
+
+.cart-panel footer .total { 
+  font-size: 1.1em; 
+  font-weight: bold; 
+  margin-bottom: 0.2rem; 
+  display: flex; 
+  justify-content: space-between; 
+}
+
+.cart-panel footer .btn-success {
+  margin-top: 5px; 
+  width: 100%;
+}
+
+.chart-container-fixed {
+    position: relative; 
+    max-height: 500px; 
+    width: 100%;
+}
+
+
+/* ======== MEDIA QUERIES (MÓVIL) */
+@media (max-width: 768px) {
+  
+  /* AJUSTE CRÍTICO EN MÓVIL: Reducir encabezado y logo */
+  header {
+    padding: 0.3rem 1.2rem; 
+  }
+  body {
+    padding-top: 60px; 
+  }
+  .logo-container img {
+    height: 40px; 
+  }
+  .logo-container h1 {
+    font-size: 1.2rem; 
+    text-align: left; 
+  }
+  
+  /* Restauramos el flujo normal en móvil (las columnas se apilan) */
+  .pos-layout { flex-direction: column; }
+  .pos-right { 
+      display: none; 
+  }
+  
+  /* Carrito flotante (sin cambios) */
+  .cart-panel { 
+    width: 100%; 
+    right: 0; 
+    top: auto; 
+    bottom: 0;
+    height: 90vh;
+    max-height: none; 
+    transform: translateY(100%); 
+    transition: transform 0.3s ease; 
+  }
+  .cart-panel.active { 
+    transform: translateY(0); 
+  }
+}
